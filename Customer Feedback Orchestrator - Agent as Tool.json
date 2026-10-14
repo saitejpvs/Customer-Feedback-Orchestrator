@@ -1,0 +1,470 @@
+{
+  "name": "Customer Feedback Orchestrator - Agent as Tool",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": true,
+          "allowedFilesMimeTypes": "text/csv"
+        }
+      },
+      "id": "3cd1c68f-9f07-4835-a923-92257e53d729",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        640,
+        368
+      ],
+      "webhookId": "e9875555-0e0e-4a21-840d-2a2feb2ebddb"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ !!($binary && $binary.data0) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "d900b7e6-629f-4ee8-9c59-92b30e34eca8"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "77768183-7fc2-4b11-8794-af76f0b11596",
+      "name": "Has File?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        848,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "data0",
+        "options": {}
+      },
+      "id": "02e9ebc2-2cfb-40b4-a6df-0966a81e8055",
+      "name": "Extract from File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1024,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "reviews",
+        "options": {}
+      },
+      "id": "6e86555e-b95b-49fc-a9a3-720ccb56728e",
+      "name": "Combine Reviews",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $(\"When chat message received\").first().json.chatInput || \"\" }}{{ $(\"Combine Reviews\").isExecuted ? \"\\n\\nUploaded customer reviews file (CSV rows as JSON):\\n\" + JSON.stringify($(\"Combine Reviews\").first().json.reviews) : \"\" }}",
+        "options": {
+          "systemMessage": "You are the Principal Product & Support Operations Orchestrator. You coordinate customer review analysis, product intelligence synthesis, and external publishing through dedicated specialized agents.\n\nYour Workflow Rules:\n1. When the user submits customer reviews (pasted text or an uploaded reviews file included in the message), call the 'Review Intelligence Agent'. Do not perform the clustering or extraction yourself.\n2. Once the 'Review Intelligence Agent' returns the Weekly Product Pulse and Fee Explainer, display the complete drafted pulse and explainer to the user in chat.\n3. APPROVAL GATE: Explicitly prompt the user for confirmation: 'Do you approve appending this entry to internal documentation and generating the Gmail draft? (Yes/No)'.\n4. DO NOT call the 'Ops Dispatch Agent' until the user explicitly responds with affirmative approval (e.g., 'Yes', 'Approve', 'Proceed').\n5. Once approved, invoke the 'Ops Dispatch Agent' to append the structured entry to internal docs and create the email draft via the MCP Client.\n6. Do not invoke any agent more than once per user request."
+        }
+      },
+      "id": "f1b975b8-5916-47be-90af-57a4e9ddd0f2",
+      "name": "Feedback Orchestrator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1536,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "1b093072-aa0d-47fa-8ce2-9d7a2894ae4b",
+      "name": "OpenAI Chat Model - Orchestrator",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        576
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ \"orchestrator-\" + $(\"When chat message received\").first().json.sessionId }}",
+        "contextWindowLength": 100
+      },
+      "id": "d22fcb5b-1230-4d18-a6a0-875e429174b9",
+      "name": "Orchestrator Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Analyzes raw customer reviews, clusters feedback, generates a <=250 word Weekly Product Pulse, and drafts a standardized fee explainer. Call this agent first whenever raw feedback or review data needs processing.",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "You are a Senior Product Intelligence Specialist analyzing customer reviews from the past 8–12 weeks.\n\nYour deliverables:\n1. Cluster feedback into maximum 5 themes and rank the top 3 themes.\n2. Extract 3 verbatim customer quotes illustrating friction.\n3. Identify 1 recurring confusion or pain point regarding a fee or charge (e.g., recurring $20/month auto-renewal after uninstalling the mobile app).\n4. Generate a Weekly Product Pulse (strictly <= 250 words) with summary of themes, quotes, key observation, and 3 actionable ideas.\n5. Generate a Standardized Fee Explainer with <= 6 bullet points in a neutral tone, 2 official documentation links, and 'Last checked: [current date]'.\n\nYou may use the SerpAPI tool to verify official pricing policies and documentation URLs. Do not call the search tool more than 3 times."
+        }
+      },
+      "id": "a2c5fc7a-3545-485b-a9bb-78de68c494a4",
+      "name": "Review Intelligence Agent",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        1696,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "b761ca75-680a-45b3-af26-e7beddd29c57",
+      "name": "OpenAI Chat Model - Intelligence",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1568,
+        784
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ \"intelligence-\" + $(\"When chat message received\").first().json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "67c60afd-f1db-4aa1-8312-4fa9ba3d93b9",
+      "name": "Intelligence Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1712,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "8e2c36cc-dc23-4df7-8359-5068a1f5e97c",
+      "name": "SerpAPI Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        784
+      ],
+      "credentials": {
+        "serpApi": {
+          "id": "czNlsu3D9ca0SZDG",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Publishes approved Product Pulse notes and Fee Explainers across internal tools via MCP. Appends entries to internal documents and generates bulleted email. Call this agent ONLY AFTER the user has explicitly confirmed approval.",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "You are the Support Operations Dispatch Agent.\n\nWhen invoked with approved content, use the connected MCP Client tool to execute two actions:\n1. Append to Internal Doc / Notes with schema:\n   date, top_themes, weekly_pulse, identified_fee_issue, explanation_bullets, source_links.\n2. Create visually appealing Email Draft:\n   Subject: Weekly Product Pulse + Customer Clarification\n   Body: Includes the Weekly Product Pulse followed by the reusable support Fee Explainer snippet.\n   Ensure this is created strictly as a DRAFT (no auto-send).\n\nReport execution confirmation back upon completion."
+        }
+      },
+      "id": "ce970091-94c8-44ab-b2d6-94b6988c0ca5",
+      "name": "Ops Dispatch Agent",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        1952,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "36a9c4ac-0116-4fb7-8def-a403dd610fb8",
+      "name": "OpenAI Chat Model - Dispatch",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1968,
+        912
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ \"dispatch-\" + $(\"When chat message received\").first().json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "84e0b6ff-5c4c-4ff3-b307-a6be8b750c34",
+      "name": "Dispatch Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2080,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://saitejpvs.app.n8n.cloud/mcp/b7e2e9ca-c8d3-40d3-aba2-5505bf67efb5",
+        "options": {}
+      },
+      "id": "66cf5fb2-4f65-4429-8bdc-8037917c512f",
+      "name": "MCP Client",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        2192,
+        768
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Has File?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has File?": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feedback Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Combine Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Reviews": {
+      "main": [
+        [
+          {
+            "node": "Feedback Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Orchestrator": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Feedback Orchestrator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orchestrator Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Feedback Orchestrator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Intelligence Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Feedback Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Intelligence": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Review Intelligence Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intelligence Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Review Intelligence Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Review Intelligence Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ops Dispatch Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Feedback Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Dispatch": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Ops Dispatch Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Ops Dispatch Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "Ops Dispatch Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c3dc644e-f5ac-4bd8-a5b6-b4d53f640518",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d040ecbf1f898b25ad22ad6346db30304f932bf3e4be4edf32660a3512cfcd05"
+  },
+  "nodeGroups": [],
+  "id": "cWh8lBHBVWbvQu1V",
+  "tags": []
+}

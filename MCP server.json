@@ -1,0 +1,115 @@
+{
+  "name": "MCP server",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "b7e2e9ca-c8d3-40d3-aba2-5505bf67efb5",
+        "instructions": "When invoked send an email to Gmail and also Document to Drive."
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e47ffd33-05ad-407d-8c65-bb6996849474",
+      "name": "MCP Server Trigger",
+      "webhookId": "b7e2e9ca-c8d3-40d3-aba2-5505bf67efb5"
+    },
+    {
+      "parameters": {
+        "sendTo": "saitejpvs@gmail.com",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        224
+      ],
+      "id": "ea49aacd-0430-475c-9a55-4eddb2c6a40a",
+      "name": "Send a message in Gmail",
+      "webhookId": "65bc35e6-6d9d-4789-a0af-3066efe7ce83",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1UYr4VJWchQ7SNXy",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('File_Name', ``, 'string') }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1xx7bnD4Kg_9j_MRuhJU3hsyhdn_rVgX4",
+          "mode": "list",
+          "cachedResultName": "Mile5",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1xx7bnD4Kg_9j_MRuhJU3hsyhdn_rVgX4"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTool",
+      "typeVersion": 3,
+      "position": [
+        240,
+        224
+      ],
+      "id": "a127a549-28b0-4151-9f0f-317d7d4a940c",
+      "name": "Create file from text in Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GRCTXZ4LuLpsZ7YO",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create file from text in Google Drive": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "613acd70-c26d-4382-aa25-5d1ae5dc388c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d040ecbf1f898b25ad22ad6346db30304f932bf3e4be4edf32660a3512cfcd05"
+  },
+  "nodeGroups": [],
+  "id": "5UxwjrpYj0ZeKcvz",
+  "tags": []
+}
